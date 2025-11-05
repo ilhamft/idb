@@ -381,7 +381,7 @@ export function indexGetOne(
   query: IDBKeyRange | undefined,
   next: (result: Ok<any> | GError<any>) => void
 ): void {
-  if (query) handleRequest(() => index.get(query), next);
+  if (query) return handleRequest(() => index.get(query), next);
   handleRequest(
     () => index.getAll(),
     (x) => {
