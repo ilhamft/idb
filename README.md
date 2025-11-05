@@ -2,8 +2,8 @@
 
 [![Package Version](https://img.shields.io/hexpm/v/idb)](https://hex.pm/packages/idb)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/idb/)
-[![mit](https://img.shields.io/github/license/ilhamft/idb?color=brightgreen)](https://github.com/ilhamft/idb/blob/main/LICENSE)
-[![gleam js](https://img.shields.io/badge/%20gleam%20%E2%9C%A8-JS-yellow)](https://gleam.run/news/v0.16-gleam-compiles-to-javascript/)
+[![MIT](https://img.shields.io/github/license/ilhamft/idb?color=brightgreen)](https://github.com/ilhamft/idb/blob/main/LICENSE)
+[![Gleam JS](https://img.shields.io/badge/%20gleam%20%E2%9C%A8-JS-yellow)](https://gleam.run/news/v0.16-gleam-compiles-to-javascript/)
 
 Gleam bindings for the [IndexedDB](https://developer.mozilla.org/docs/Web/API/IndexedDB_API) API.
 This library is still a work in progress, so not all IndexedDB features are included yet.
