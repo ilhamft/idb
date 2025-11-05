@@ -6,6 +6,7 @@
 [![gleam js](https://img.shields.io/badge/%20gleam%20%E2%9C%A8-JS-yellow)](https://gleam.run/news/v0.16-gleam-compiles-to-javascript/)
 
 Gleam bindings for the [IndexedDB](https://developer.mozilla.org/docs/Web/API/IndexedDB_API) API.
+This library is still a work in progress, so not all IndexedDB features are included yet.
 
 ## Installation
 
