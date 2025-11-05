@@ -1,0 +1,21 @@
+name = "idb"
+version = "0.0.1"
+target = "javascript"
+
+licences = ["MIT"]
+description = "Gleam bindings for the IndexedDB API"
+
+repository = { type = "github", user = "ilhamft", repo = "idb" }
+links = [
+  { title = "Package", href = "https://hex.pm/packages/idb" },
+  { title = "Docs", href = "https://hexdocs.pm/idb/" },
+]
+
+internal_modules = ["idb/internals/*"]
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+gleam_json = ">= 3.0.2 and < 4.0.0"
+
+[javascript]
+typescript_declarations = true
