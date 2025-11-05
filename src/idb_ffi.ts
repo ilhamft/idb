@@ -1,13 +1,15 @@
 // @ts-ignore
-import { Ok, Error } from './gleam.mjs';
+import { Ok, Error as GError, List } from './gleam.mjs';
 // @ts-ignore
-import { Some, None } from './gleam/option.mjs';
+import { list_to_array } from '../gleam_stdlib/gleam_stdlib.mjs';
+// @ts-ignore
+import { Some, None } from '../gleam_stdlib/gleam/option.mjs';
 
 declare class Ok<T> {
   0: T;
   constructor($0: T);
 }
-declare class Error<T> {
+declare class GError<T> {
   0: T;
   constructor($0: T);
 }
@@ -17,7 +19,8 @@ declare class Some<T> {
 }
 declare class None {}
 
-export function key(key: IDBValidKey): IDBValidKey {
+export function key(key: IDBValidKey | List<IDBValidKey>): IDBValidKey {
+  if (key instanceof List) return list_to_array(key);
   return key;
 }
 
@@ -62,7 +65,7 @@ export function keyRangeIncludes(
 }
 
 export function getDatabases(
-  next: (result: Ok<[string, number][]> | Error<any>) => void
+  next: (result: Ok<[string, number][]> | GError<any>) => void
 ): void {
   window.indexedDB
     .databases()
@@ -76,7 +79,7 @@ export function getDatabases(
         )
       )
     )
-    .catch((error) => next(new Error(error)));
+    .catch((error) => next(new GError(error)));
 }
 
 export function connect(
@@ -92,7 +95,7 @@ export function connect(
     | Some<(currentVersion: number, blockedVersion: number) => void>
     | None,
   onClose: Some<() => void> | None,
-  next: (result: Ok<IDBDatabase> | Error<any>) => void
+  next: (result: Ok<IDBDatabase> | GError<any>) => void
 ): void {
   const request = window.indexedDB.open(name, version);
   if (onBlocked instanceof Some)
@@ -100,11 +103,11 @@ export function connect(
   if (onUpgradeNeeded instanceof Some)
     request.onupgradeneeded = (event) => {
       if (!request.transaction) {
-        return next(new Error('request.transaction is missing'));
+        return next(new GError('request.transaction is missing'));
       }
       onUpgradeNeeded[0](request.transaction, event.oldVersion, version);
     };
-  request.onerror = () => next(new Error(request.error));
+  request.onerror = () => next(new GError(request.error));
   request.onsuccess = () => {
     const db = request.result;
     if (onVersionChange instanceof Some)
@@ -117,14 +120,14 @@ export function connect(
 
 export function deleteDatabase(
   name: string,
-  next: (result: Ok<undefined> | Error<any>) => void
+  next: (result: Ok<undefined> | GError<any>) => void
 ): void {
   try {
     const request = window.indexedDB.deleteDatabase(name);
-    request.onerror = () => next(new Error(request.error));
+    request.onerror = () => next(new GError(request.error));
     request.onsuccess = () => next(new Ok(undefined));
   } catch (error) {
-    next(new Error(error));
+    next(new GError(error));
   }
 }
 
@@ -132,16 +135,16 @@ export function startTransaction(
   db: IDBDatabase,
   storeNames: string[],
   mode: 'readonly' | 'readwrite',
-  onClose: (result: Ok<undefined> | Error<any>) => void
-): Ok<IDBTransaction> | Error<any> {
+  onClose: (result: Ok<undefined> | GError<any>) => void
+): Ok<IDBTransaction> | GError<any> {
   try {
     const tx = db.transaction(storeNames, mode);
-    tx.onabort = () => onClose(new Error(tx.error));
-    tx.onerror = () => onClose(new Error(tx.error));
+    tx.onabort = () => onClose(new GError(tx.error));
+    tx.onerror = () => onClose(new GError(tx.error));
     tx.oncomplete = () => onClose(new Ok(undefined));
     return new Ok(tx);
   } catch (error) {
-    return new Error(error);
+    return new GError(error);
   }
 }
 
@@ -156,11 +159,11 @@ export function getTransactionStoreNames(tx: IDBTransaction): string[] {
 export function getStore(
   tx: IDBTransaction,
   name: string
-): Ok<IDBObjectStore> | Error<any> {
+): Ok<IDBObjectStore> | GError<any> {
   try {
     return new Ok(tx.objectStore(name));
   } catch (error) {
-    return new Error(error);
+    return new GError(error);
   }
 }
 
@@ -168,45 +171,45 @@ export function createStore(
   tx: IDBTransaction,
   name: string,
   options: IDBObjectStoreParameters | null
-): Ok<IDBObjectStore> | Error<any> {
+): Ok<IDBObjectStore> | GError<any> {
   try {
     const db = tx.db;
     return new Ok(db.createObjectStore(name, options ?? undefined));
   } catch (error) {
-    return new Error(error);
+    return new GError(error);
   }
 }
 
 export function deleteStore(
   tx: IDBTransaction,
   name: string
-): Ok<undefined> | Error<any> {
+): Ok<undefined> | GError<any> {
   try {
     const db = tx.db;
     db.deleteObjectStore(name);
     return new Ok(undefined);
   } catch (error) {
-    return new Error(error);
+    return new GError(error);
   }
 }
 
 function handleRequest<T>(
   requestFn: () => IDBRequest<T>,
-  next: (result: Ok<T> | Error<any>) => void
+  next: (result: Ok<T> | GError<any>) => void
 ): void {
   try {
     const request = requestFn();
-    request.onerror = () => next(new Error(request.error));
+    request.onerror = () => next(new GError(request.error));
     request.onsuccess = () => next(new Ok(request.result));
   } catch (error) {
-    next(new Error(error));
+    next(new GError(error));
   }
 }
 
 export function add(
   store: IDBObjectStore,
   value: any,
-  next: (result: Ok<IDBValidKey> | Error<any>) => void
+  next: (result: Ok<IDBValidKey> | GError<any>) => void
 ): void {
   handleRequest(() => store.add(value), next);
 }
@@ -215,7 +218,7 @@ export function addTo(
   store: IDBObjectStore,
   key: IDBValidKey,
   value: any,
-  next: (result: Ok<IDBValidKey> | Error<any>) => void
+  next: (result: Ok<IDBValidKey> | GError<any>) => void
 ): void {
   handleRequest(() => store.add(value, key), next);
 }
@@ -223,7 +226,7 @@ export function addTo(
 export function count(
   store: IDBObjectStore,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<number> | Error<any>) => void
+  next: (result: Ok<number> | GError<any>) => void
 ): void {
   handleRequest(() => store.count(query), next);
 }
@@ -231,7 +234,7 @@ export function count(
 export function delete_(
   store: IDBObjectStore,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<any> | Error<any>) => void
+  next: (result: Ok<any> | GError<any>) => void
 ): void {
   handleRequest(() => {
     if (query) return store.delete(query);
@@ -242,9 +245,9 @@ export function delete_(
 export function getOne(
   store: IDBObjectStore,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<any> | Error<any>) => void
+  next: (result: Ok<any> | GError<any>) => void
 ): void {
-  if (query) handleRequest(() => store.get(query), next);
+  if (query) return handleRequest(() => store.get(query), next);
   handleRequest(
     () => store.getAll(),
     (x) => {
@@ -257,7 +260,7 @@ export function getOne(
 export function get(
   store: IDBObjectStore,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<any> | Error<any>) => void
+  next: (result: Ok<any> | GError<any>) => void
 ): void {
   handleRequest(() => store.getAll(query), next);
 }
@@ -266,7 +269,7 @@ export function getWithLimit(
   store: IDBObjectStore,
   query: IDBKeyRange | undefined,
   limit: number,
-  next: (result: Ok<any> | Error<any>) => void
+  next: (result: Ok<any> | GError<any>) => void
 ): void {
   handleRequest(
     () => store.getAll(query, limit >= 0 ? limit : undefined),
@@ -277,7 +280,7 @@ export function getWithLimit(
 export function getOneKey(
   store: IDBObjectStore,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<IDBValidKey | undefined> | Error<any>) => void
+  next: (result: Ok<IDBValidKey | undefined> | GError<any>) => void
 ): void {
   if (query) handleRequest(() => store.getKey(query), next);
   handleRequest(
@@ -292,7 +295,7 @@ export function getOneKey(
 export function getKeys(
   store: IDBObjectStore,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<IDBValidKey[]> | Error<any>) => void
+  next: (result: Ok<IDBValidKey[]> | GError<any>) => void
 ): void {
   handleRequest(() => store.getAllKeys(query), next);
 }
@@ -301,7 +304,7 @@ export function getKeysWithLimit(
   store: IDBObjectStore,
   query: IDBKeyRange | undefined,
   limit: number,
-  next: (result: Ok<IDBValidKey[]> | Error<any>) => void
+  next: (result: Ok<IDBValidKey[]> | GError<any>) => void
 ): void {
   handleRequest(
     () => store.getAllKeys(query, limit >= 0 ? limit : undefined),
@@ -312,7 +315,7 @@ export function getKeysWithLimit(
 export function put(
   store: IDBObjectStore,
   value: any,
-  next: (result: Ok<IDBValidKey> | Error<any>) => void
+  next: (result: Ok<IDBValidKey> | GError<any>) => void
 ): void {
   handleRequest(() => store.put(value), next);
 }
@@ -321,7 +324,7 @@ export function putTo(
   store: IDBObjectStore,
   key: IDBValidKey,
   value: any,
-  next: (result: Ok<IDBValidKey> | Error<any>) => void
+  next: (result: Ok<IDBValidKey> | GError<any>) => void
 ): void {
   handleRequest(() => store.put(value, key), next);
 }
@@ -333,11 +336,11 @@ export function getIndexNames(store: IDBObjectStore): string[] {
 export function getIndex(
   store: IDBObjectStore,
   name: string
-): Ok<IDBIndex> | Error<any> {
+): Ok<IDBIndex> | GError<any> {
   try {
     return new Ok(store.index(name));
   } catch (error) {
-    return new Error(error);
+    return new GError(error);
   }
 }
 
@@ -346,29 +349,29 @@ export function createIndex(
   name: string,
   key: string | string[],
   options: IDBIndexParameters | null
-): Ok<IDBIndex> | Error<any> {
+): Ok<IDBIndex> | GError<any> {
   try {
     return new Ok(store.createIndex(name, key, options ?? undefined));
   } catch (error) {
-    return new Error(error);
+    return new GError(error);
   }
 }
 
 export function deleteIndex(
   store: IDBObjectStore,
   name: string
-): Ok<undefined> | Error<any> {
+): Ok<undefined> | GError<any> {
   try {
     return new Ok(store.deleteIndex(name));
   } catch (error) {
-    return new Error(error);
+    return new GError(error);
   }
 }
 
 export function indexCount(
   index: IDBIndex,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<number> | Error<any>) => void
+  next: (result: Ok<number> | GError<any>) => void
 ): void {
   handleRequest(() => index.count(query), next);
 }
@@ -376,7 +379,7 @@ export function indexCount(
 export function indexGetOne(
   index: IDBIndex,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<any> | Error<any>) => void
+  next: (result: Ok<any> | GError<any>) => void
 ): void {
   if (query) handleRequest(() => index.get(query), next);
   handleRequest(
@@ -391,7 +394,7 @@ export function indexGetOne(
 export function indexGet(
   index: IDBIndex,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<any> | Error<any>) => void
+  next: (result: Ok<any> | GError<any>) => void
 ): void {
   handleRequest(() => index.getAll(query), next);
 }
@@ -400,7 +403,7 @@ export function indexGetWithLimit(
   index: IDBIndex,
   query: IDBKeyRange | undefined,
   limit: number,
-  next: (result: Ok<any> | Error<any>) => void
+  next: (result: Ok<any> | GError<any>) => void
 ): void {
   handleRequest(
     () => index.getAll(query, limit >= 0 ? limit : undefined),
@@ -411,7 +414,7 @@ export function indexGetWithLimit(
 export function indexGetOneKey(
   index: IDBIndex,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<IDBValidKey | undefined> | Error<any>) => void
+  next: (result: Ok<IDBValidKey | undefined> | GError<any>) => void
 ): void {
   if (query) handleRequest(() => index.getKey(query), next);
   handleRequest(
@@ -426,7 +429,7 @@ export function indexGetOneKey(
 export function indexGetKeys(
   index: IDBIndex,
   query: IDBKeyRange | undefined,
-  next: (result: Ok<IDBValidKey[]> | Error<any>) => void
+  next: (result: Ok<IDBValidKey[]> | GError<any>) => void
 ): void {
   handleRequest(() => index.getAllKeys(query), next);
 }
@@ -435,7 +438,7 @@ export function indexGetKeysWithLimit(
   index: IDBIndex,
   query: IDBKeyRange | undefined,
   limit: number,
-  next: (result: Ok<IDBValidKey[]> | Error<any>) => void
+  next: (result: Ok<IDBValidKey[]> | GError<any>) => void
 ): void {
   handleRequest(
     () => index.getAllKeys(query, limit >= 0 ? limit : undefined),
